@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demand Forecasting Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="shell">
+
+    <!-- ============================= SIDEBAR ============================= -->
+    <aside class="sidebar">
+      <p class="sidebar__brand">Demand Forecasting</p>
+      <p class="sidebar__subtitle">Retail supply chain &middot; EDA dashboard</p>
+
+      <nav class="sidebar__nav">
+        <a href="#overview">Overview</a>
+        <a href="#sales">Sales</a>
+        <a href="#inventory">Inventory</a>
+        <a href="#demand">Demand drivers</a>
+        <a href="#pricing">Pricing &amp; promotion</a>
+        <a href="#risk">Stock-out risk</a>
+        <a href="#correlation">Correlation</a>
+        <a href="#ranking">Product ranking</a>
+        <a href="#quality">Data quality</a>
+      </nav>
+
+      <div class="sidebar__meta">
+        <strong>{{ quality.date_range.start }} &rarr; {{ quality.date_range.end }}</strong>
+        {{ quality.date_range.unique_dates }} days &middot; {{ metrics.total_records | commas }} records
+      </div>
+    </aside>
+
+    <!-- ============================== MAIN =============================== -->
+    <main class="main">
+
+      <section id="overview">
+        <div class="hero">
+          <h1>Demand Forecasting Dashboard</h1>
+          <p>
+            Daily store &times; product records across 5 stores, 20 products and
+            5 categories. Figures below are computed from the cleaned dataset
+            &mdash; see <a href="#quality">Data quality</a> for what was fixed
+            on the way in.
+          </p>
+        </div>
+
+        <div class="kpi-strip">
+          <div class="kpi">
+            <p class="kpi__label">Total revenue</p>
+            <p class="kpi__value">{{ metrics.total_revenue | commas }}</p>
+          </div>
+          <div class="kpi">
+            <p class="kpi__label">Total demand (units)</p>
+            <p class="kpi__value">{{ metrics.total_demand | commas }}</p>
+          </div>
+          <div class="kpi">
+            <p class="kpi__label">Fulfilment rate</p>
+            <p class="kpi__value kpi__value--teal">{{ metrics.fulfilment_rate | commas(1) }}%</p>
+          </div>
+          <div class="kpi">
+            <p class="kpi__label">Stock-out rate</p>
+            <p class="kpi__value kpi__value--amber">{{ metrics.stock_out_rate | commas(1) }}%</p>
+          </div>
+          <div class="kpi">
+            <p class="kpi__label">Unmet demand</p>
+            <p class="kpi__value">{{ metrics.total_unmet_demand | commas }}</p>
+            <p class="kpi__sub">units of lost sales opportunity</p>
+          </div>
+          <div class="kpi">
+            <p class="kpi__label">Promotion lift</p>
+            <p class="kpi__value kpi__value--teal">+{{ metrics.promotion_lift | commas(1) }}%</p>
+            <p class="kpi__sub">demand vs. no promotion</p>
+          </div>
+          <div class="kpi">
+            <p class="kpi__label">Epidemic impact</p>
+            <p class="kpi__value kpi__value--clay">{{ metrics.epidemic_impact | commas(1) }}%</p>
+            <p class="kpi__sub">demand vs. normal periods</p>
+          </div>
+          <div class="kpi">
+            <p class="kpi__label">Average discount</p>
+            <p class="kpi__value">{{ metrics.average_discount | commas(1) }}%</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================= SALES ============================= -->
+      <section id="sales">
+        <h2>Sales</h2>
+        <p class="section-intro">
+          Revenue is highest in {{ metrics.top_category }}, and demand peaks in
+          {{ metrics.top_season }} &mdash; see <a href="#demand">Demand drivers</a>
+          for the seasonal breakdown.
+        </p>
+
+        <div class="panel-grid">
+          <div class="panel">
+            <h3>Revenue by category</h3>
+            <canvas id="chart-category-revenue"></canvas>
+          </div>
+          <div class="panel">
+            <h3>Revenue share by category</h3>
+            <canvas id="chart-category-share"></canvas>
+          </div>
+          <div class="panel panel--wide">
+            <h3>Top 10 products by revenue</h3>
+            <canvas id="chart-top-products"></canvas>
+          </div>
+          <div class="panel">
+            <h3>Revenue by region</h3>
+            <canvas id="chart-region-revenue"></canvas>
+          </div>
+          <div class="panel">
+            <h3>Revenue by store</h3>
+            <canvas id="chart-store-revenue"></canvas>
+          </div>
+
+          <div class="panel panel--wide">
+            <h3>Category scorecard</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Total revenue</th>
+                    <th>Units sold</th>
+                    <th>Avg. demand</th>
+                    <th>Avg. inventory</th>
+                    <th>Stock-out rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in performance.category %}
+                  <tr>
+                    <td class="text-cell">{{ row.name }}</td>
+                    <td>{{ row.total_revenue | commas }}</td>
+                    <td>{{ row.total_units_sold | commas }}</td>
+                    <td>{{ row.average_demand | commas(1) }}</td>
+                    <td>{{ row.average_inventory | commas(1) }}</td>
+                    <td>{{ row.stock_out_rate | commas(1) }}%</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================== INVENTORY ============================ -->
+      <section id="inventory">
+        <h2>Inventory</h2>
+        <p class="section-intro">
+          Coverage is inventory level divided by average demand &mdash; roughly
+          how many days of demand the current stock would cover. Lower means
+          tighter, higher-risk stock.
+        </p>
+
+        <div class="panel-grid">
+          <div class="panel panel--wide">
+            <h3>Coverage &amp; stock-out rate by category (tightest first)</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Avg. coverage</th>
+                    <th>Avg. inventory</th>
+                    <th>Stock-out rate</th>
+                    <th>Total revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in performance.category | sort(attribute='average_coverage') %}
+                  <tr>
+                    <td class="text-cell">{{ row.name }}</td>
+                    <td>{{ row.average_coverage | commas(2) }}</td>
+                    <td>{{ row.average_inventory | commas(1) }}</td>
+                    <td>
+                      {% if row.stock_out_rate >= 15 %}<span class="tag tag--risk">{{ row.stock_out_rate | commas(1) }}%</span>
+                      {% elif row.stock_out_rate >= 10 %}<span class="tag tag--warn">{{ row.stock_out_rate | commas(1) }}%</span>
+                      {% else %}<span class="tag tag--ok">{{ row.stock_out_rate | commas(1) }}%</span>{% endif %}
+                    </td>
+                    <td>{{ row.total_revenue | commas }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel panel--wide">
+            <h3>Store scorecard</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Store</th>
+                    <th>Total revenue</th>
+                    <th>Avg. inventory</th>
+                    <th>Avg. coverage</th>
+                    <th>Stock-out rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in performance.store %}
+                  <tr>
+                    <td class="text-cell">{{ row.name }}</td>
+                    <td>{{ row.total_revenue | commas }}</td>
+                    <td>{{ row.average_inventory | commas(1) }}</td>
+                    <td>{{ row.average_coverage | commas(2) }}</td>
+                    <td>{{ row.stock_out_rate | commas(1) }}%</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================= DEMAND DRIVERS ========================= -->
+      <section id="demand">
+        <h2>Demand drivers</h2>
+        <p class="section-intro">
+          What moves demand across the two-year window: month, season, weather
+          and day of week.
+        </p>
+
+        <div class="panel-grid">
+          <div class="panel panel--wide">
+            <h3>Monthly revenue &amp; demand trend</h3>
+            <canvas id="chart-monthly-trend"></canvas>
+          </div>
+          <div class="panel">
+            <h3>Average demand by season</h3>
+            <canvas id="chart-seasonal-demand"></canvas>
+          </div>
+          <div class="panel">
+            <h3>Average demand by weather</h3>
+            <canvas id="chart-weather-demand"></canvas>
+          </div>
+          <div class="panel">
+            <h3>Average demand by month (seasonal cycle)</h3>
+            <canvas id="chart-month-demand"></canvas>
+          </div>
+          <div class="panel">
+            <h3>Average demand by day of week</h3>
+            <canvas id="chart-weekday-demand"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================== PRICING & PROMOTION ===================== -->
+      <section id="pricing">
+        <h2>Pricing &amp; promotion</h2>
+        <p class="section-intro">
+          Promotions lift average demand {{ metrics.promotion_lift | commas(1) }}%.
+          Price itself correlates weakly with demand &mdash; see
+          <a href="#correlation">Correlation</a>.
+        </p>
+
+        <div class="panel-grid">
+          <div class="panel">
+            <h3>Average demand by discount band</h3>
+            <canvas id="chart-discount-band"></canvas>
+          </div>
+          <div class="panel">
+            <h3>Average demand: promotion vs. none</h3>
+            <canvas id="chart-promotion"></canvas>
+          </div>
+          <div class="panel panel--wide">
+            <h3>Average demand by competitive price position</h3>
+            <canvas id="chart-price-position"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== RISK ============================== -->
+      <section id="risk">
+        <h2>Stock-out risk</h2>
+        <p class="section-intro">
+          A record is flagged when demand exceeds that day's inventory level.
+          {{ metrics.total_unmet_demand | commas }} units of demand went
+          unfulfilled across the cleaned dataset.
+        </p>
+
+        <div class="panel-grid">
+          <div class="panel panel--wide">
+            <h3>Stock-out rate by category</h3>
+            <canvas id="chart-stock-out"></canvas>
+          </div>
+
+          <div class="panel panel--wide">
+            <h3>10 highest stock-out-risk products</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Stock-out rate</th>
+                    <th>Fulfilment rate</th>
+                    <th>Total revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in ranking | sort(attribute='stock_out_rate', reverse=true) %}
+                  {% if loop.index <= 10 %}
+                  <tr>
+                    <td class="text-cell">{{ row.product_id }}</td>
+                    <td class="text-cell">{{ row.category }}</td>
+                    <td><span class="tag tag--risk">{{ row.stock_out_rate | commas(1) }}%</span></td>
+                    <td>{{ row.fulfilment_rate | commas(1) }}%</td>
+                    <td>{{ row.total_revenue | commas }}</td>
+                  </tr>
+                  {% endif %}
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================== CORRELATION =========================== -->
+      <section id="correlation">
+        <h2>Correlation with demand</h2>
+        <p class="section-intro">
+          Correlation measures a linear relationship only, and does not prove
+          causation &mdash; a positive discount/demand correlation may reflect
+          discounts being timed to already-high-demand periods rather than
+          discounts causing the demand.
+        </p>
+
+        <div class="panel-grid">
+          <div class="panel panel--wide">
+            <h3>Each variable's correlation with demand</h3>
+            <canvas id="chart-correlation"></canvas>
+          </div>
+
+          <div class="panel">
+            <h3>Distribution summary</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr><th>Variable</th><th>Mean</th><th>Median</th><th>Std. dev</th></tr>
+                </thead>
+                <tbody>
+                  {% for col, stats in statistics.numeric_summary.items() %}
+                  {% if col in ['demand', 'revenue', 'units_sold', 'price', 'inventory_level'] %}
+                  <tr>
+                    <td class="text-cell">{{ col.replace('_', ' ') }}</td>
+                    <td>{{ stats.mean | commas(2) }}</td>
+                    <td>{{ stats['50%'] | commas(2) }}</td>
+                    <td>{{ stats.std | commas(2) }}</td>
+                  </tr>
+                  {% endif %}
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>Outlier counts (IQR rule)</h3>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Column</th><th>Outlier records</th></tr></thead>
+                <tbody>
+                  {% for col, count in statistics.outlier_counts.items() %}
+                  <tr>
+                    <td class="text-cell">{{ col.replace('_', ' ') }}</td>
+                    <td>{{ count | commas }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ RANKING ============================= -->
+      <section id="ranking">
+        <h2>Product ranking</h2>
+        <p class="section-intro">
+          Every product&ndash;category combination, ranked by total revenue.
+          Product IDs recur across categories in this dataset, so ranking is by
+          the (product, category) pair rather than product alone.
+        </p>
+
+        <div class="panel panel--wide">
+          <div class="table-scroll" style="max-height: 480px; overflow-y: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>Total revenue</th>
+                  <th>Units sold</th>
+                  <th>Avg. demand</th>
+                  <th>Fulfilment rate</th>
+                  <th>Stock-out rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in ranking %}
+                <tr>
+                  <td>{{ row.rank }}</td>
+                  <td class="text-cell">{{ row.product_id }}</td>
+                  <td class="text-cell">{{ row.category }}</td>
+                  <td>{{ row.total_revenue | commas }}</td>
+                  <td>{{ row.total_units_sold | commas }}</td>
+                  <td>{{ row.average_demand | commas(1) }}</td>
+                  <td>{{ row.fulfilment_rate | commas(1) }}%</td>
+                  <td>{{ row.stock_out_rate | commas(1) }}%</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ QUALITY ============================= -->
+      <section id="quality">
+        <h2>Data quality</h2>
+        <p class="section-intro">
+          What the raw file looked like before cleaning, and what
+          <code>backend/preprocessing.py</code> did about it.
+        </p>
+
+        <div class="quality-grid">
+          <div class="panel">
+            <h3>Before cleaning</h3>
+            <ul class="quality-list">
+              <li><span>Rows in file</span><span>{{ quality.rows_in_file | commas }}</span></li>
+              <li><span>Duplicate rows</span><span>{{ quality.duplicate_rows | commas }}</span></li>
+              <li><span>Missing cells</span><span>{{ quality.total_missing_cells | commas }}</span></li>
+              <li><span>Business-rule violations</span><span>{{ (quality.invalid_records.values() | sum) | commas }}</span></li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>After cleaning</h3>
+            <ul class="quality-list">
+              <li><span>Rows remaining</span><span>{{ quality.rows_after_cleaning | commas }}</span></li>
+              <li><span>Duplicates removed</span><span>{{ quality.duplicates_removed | commas }}</span></li>
+              <li><span>Missing cells filled</span><span>{{ quality.missing_values_imputed | commas }}</span></li>
+              <li><span>Date range</span><span>{{ quality.date_range.unique_dates }} days</span></li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Missing values by column</h3>
+            <ul class="quality-list">
+              {% for col, count in quality.missing_values.items() %}
+              <li><span>{{ col.replace('_', ' ') }}</span><span>{{ count | commas }}</span></li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+
+        <div class="panel panel--wide">
+          <h3>Cleaning log</h3>
+          <ul class="notes-list">
+            {% for note in quality.cleaning_notes %}
+            <li>{{ note }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+
+      <p class="footer">
+        Generated by app.py from data/demand_forecasting.csv &middot;
+        run <code>python app.py</code> and refresh to recompute after
+        swapping in a new file.
+      </p>
+    </main>
+  </div>
+
+  <script id="chart-data" type="application/json">{{ charts | tojson }}</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>
