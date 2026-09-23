@@ -18,9 +18,12 @@ This project processes and analyzes **76,000 retail records** covering **5 store
 
 ## 🛠️ Tech Stack
 
-**Frontend:** HTML5, CSS3, JavaScript, Chart.js
+**Frontend:** HTML5, CSS3, JavaScript, Chart.js  
+
 **Backend:** Python, Flask
+
 **Data Analysis:** Pandas, NumPy, EDA, data preprocessing & feature engineering
+
 **Tools:** VS Code, Git, GitHub
 
 ## 🚀 Run Locally
