@@ -6,6 +6,11 @@ A Flask-based interactive dashboard for analyzing retail demand, sales, inventor
 
 This project processes and analyzes **76,000 retail records** covering **5 stores, 20 products, 5 categories, and 760 days**, and presents the results through an interactive web dashboard.
 
+<img width="1920" height="1021" alt="Screenshot (387)" src="https://github.com/user-attachments/assets/84a780c5-175a-4175-b253-31ce038cbcc7" />
+
+<img width="1920" height="1017" alt="Screenshot (391)" src="https://github.com/user-attachments/assets/3a2a22de-3832-490f-a5e9-829c9a586104" />
+
+
 ## ✨ Features
 
 * Sales and revenue analysis
